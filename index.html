@@ -136,6 +136,33 @@ body{background:#221A4E;font-family:'Nunito',system-ui,sans-serif;display:flex;a
 }
 /* ==================== [/P7-VKUI CSS] ==================== */
 
+/* ==================== [P9-DAILY+ALBUM CSS] ==================== */
+.daily{position:absolute;inset:0;z-index:15;display:flex;align-items:center;justify-content:center;
+  background:rgba(59,42,122,.35);transition:opacity .45s;pointer-events:none}
+.daily.hide{opacity:0}
+.dcard{background:#FFF7E8;border:5px solid var(--ink);border-radius:26px;box-shadow:0 10px 0 var(--ink);
+  padding:18px 34px;text-align:center;transform:scale(.5);animation:dpop .5s cubic-bezier(.2,1.4,.4,1) forwards}
+@keyframes dpop{to{transform:scale(1)}}
+.dico{font-size:54px}
+.dtxt{font-family:'Comfortaa','Nunito',system-ui,sans-serif;font-weight:700;font-size:23px;margin:4px 0 2px}
+.dsub{font-size:13.5px;font-weight:800;color:#8A7BB8}
+.shopTabs{display:flex;gap:8px;margin:2px 2px 10px}
+.stab{flex:1;font-family:'Comfortaa','Nunito',system-ui,sans-serif;font-weight:700;font-size:14.5px;
+  padding:10px 6px;border:3px solid var(--ink);border-radius:16px;background:#fff;cursor:pointer;
+  box-shadow:0 4px 0 var(--ink)}
+.stab.on{background:var(--sun)}
+.stab:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+#albGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.acard{background:#fff;border:3px solid var(--ink);border-radius:16px;padding:8px 4px 10px;
+  text-align:center;box-shadow:0 4px 0 var(--ink)}
+.acard.on{background:#EDFFF6;border-color:#2FA957;box-shadow:0 4px 0 #2FA957}
+.acard.on .pr{background:#4EE0A8}
+.ast{font-size:33px;height:42px;display:grid;place-items:center;filter:grayscale(1) opacity(.45)}
+.acard.on .ast{filter:none}
+.ast.gold{text-shadow:0 0 12px #FFD93D,0 0 22px #FF8A3D}
+.acard h4{font-size:11.5px;margin:2px 0 4px}
+/* ==================== [/P9-DAILY+ALBUM CSS] ==================== */
+
 /* ==================== [/P3-TUT CSS] ==================== */
 .blink{animation:blink 4.6s infinite}
 @keyframes blink{0%,94%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.08)}}
@@ -166,9 +193,13 @@ body{background:#221A4E;font-family:'Nunito',system-ui,sans-serif;display:flex;a
     <div class="wallet">🍩 <span id="walletN">0</span></div>
     <button class="shopClose" id="shopClose">✕</button>
   </div>
-  <div class="shopTitle">🎩 Костюмы</div>
+    <div class="shopTabs">
+    <button class="stab on" id="tabCost">🎩 Костюмы</button>
+    <button class="stab" id="tabAlb">📖 Наклейки</button>
+  </div>
   <div class="shopHint">Лови 🍩 в игре — и покупай наряды!</div>
   <div class="shopGrid" id="shopGrid"></div>
+  <div class="shopGrid" id="albGrid" style="display:none"></div>
 </div>
 </div>
 <script>
@@ -179,7 +210,8 @@ const INK='#3B2A7A';
 
 /* ==================== [P4-VK] хранилище + VK Bridge ==================== */
 const HOOKS={};   /* хуки модулей для облачной синхронизации */
-const SYNC_KEYS=['puntik_best','puntik_wallet','puntik_owned','puntik_costume','puntik_tut'];
+const SYNC_KEYS=['puntik_best','puntik_wallet','puntik_owned','puntik_costume','puntik_tut',
+ 'puntik_lastday','puntik_stats'];
 const store={
   get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } },
   set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} VKS.dirty(k); }
@@ -247,6 +279,15 @@ const VKS={
       if(cw>lw){ wallet=cw; store.set('puntik_wallet',String(cw)); }
     }
     if(map.puntik_tut==='1'&&!store.get('puntik_tut','')) store.set('puntik_tut','1');
+    if(map.puntik_lastday!==undefined&&map.puntik_lastday>store.get('puntik_lastday',''))
+      store.set('puntik_lastday',map.puntik_lastday);
+    if(map.puntik_stats!==undefined){
+      const cs=(map.puntik_stats||'').split(','), ls=store.get('puntik_stats','0,0,0,0,0,0,0').split(',');
+      let ch=false;
+      for(let i=0;i<7;i++){ const cv=+cs[i]||0, lv=+ls[i]||0;
+        if(cv>lv){ ls[i]=cv; ch=true; } }
+      if(ch) store.set('puntik_stats',ls.join(','));
+    }
     if(map.puntik_owned!==undefined||map.puntik_costume!==undefined){
       const cloud=(map.puntik_owned||'').split(',').filter(Boolean);
       if(cloud.length||map.puntik_costume){
@@ -410,7 +451,9 @@ function spawnItem(){
  const types=[['🍩',1,.55],['⭐',2,.25],['🎈',1,.13],['🍭',3,.07]];
  let r=Math.random(),acc=0,pickT=types[0];
  for(const tp of types){ acc+=tp[2]; if(r<=acc){pickT=tp;break;} }
- items.push({e:pickT[0],v:pickT[1],x:26+Math.random()*(W-52),y:-24,vy:26+Math.random()*34,
+  const gold=pickT[0]==='🍩'&&Math.random()<.08;          /* [P9] редкий золотой пончик */
+ items.push({e:pickT[0],v:gold?5:pickT[1],gold:gold?1:0,
+  x:26+Math.random()*(W-52),y:-24,vy:26+Math.random()*34,
   ph:Math.random()*6.28,amp:12+Math.random()*22,r:17,rot:rnd(-14,14)});
 }
 function burst(x,y,c,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=rnd(50,210);
@@ -491,6 +534,7 @@ function collect(it){
   const ser=Math.min(5,Math.max(1,combo-1));    /* [P5] множитель серии ×1…×5 */
  const pts=it.v*(st.super?3:1)*ser;
  score+=pts; wallet+=pts; store.set('puntik_wallet',wallet);
+if(HOOKS.collect)HOOKS.collect(it.e,it.v,it.gold);        /* [P9] счётчик наклеек */
  burst(it.x,it.y,'#FFD93D',12);
  float(it.x,it.y-10,'+'+pts,'#fff');
  S.ding(Math.min(6,combo));
@@ -524,6 +568,7 @@ function launch(){
  st.vy=-(H*.95+c*H*1.25);
  st.vx=clamp((ptr.x-st.x)*2.6,-W*1.4,W*1.4);
  st.sq=-.2; st.charge=0; if(st.super) VKS.track('super_jump');
+if(HOOKS.launch)HOOKS.launch(c);                          /* [P9] прыжки/суперы — в наклейки */
  combo=0; $('#dCombo').style.display='none';
  S.boing(c);
  if(st.super){ S.super(); float(st.x,st.y-56,'🚀 СУПЕР!','#FFD93D'); burst(st.x,st.y+18,'#FF6B6B',26); }
@@ -616,9 +661,13 @@ function draw(){
  ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.stroke();
  drawPad();
  ctx.textAlign='center'; ctx.textBaseline='middle';
-  items.forEach(it=>{ ctx.save(); ctx.translate(it.x,it.y);
+   items.forEach(it=>{ ctx.save(); ctx.translate(it.x,it.y);
+  if(it.gold){ const gg=ctx.createRadialGradient(0,0,4,0,0,30);   /* [P9] свечение */
+    gg.addColorStop(0,'rgba(255,217,61,.95)'); gg.addColorStop(1,'rgba(255,217,61,0)');
+    ctx.fillStyle=gg; ctx.beginPath(); ctx.arc(0,0,30,0,6.3); ctx.fill(); }
   ctx.rotate(it.rot*Math.PI/180+Math.sin(it.ph)*.12);
-  const sp=sprite(it.e); ctx.drawImage(sp,-21,-21,42,42); ctx.restore(); });
+  const sp=sprite(it.e); ctx.drawImage(sp,it.gold?-25:-21,it.gold?-25:-21,it.gold?50:42,it.gold?50:42);
+  ctx.restore(); });
  parts.forEach(p=>{ ctx.globalAlpha=Math.max(0,p.life*1.7); ctx.fillStyle=p.c;
   ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.3); ctx.fill(); });
  ctx.globalAlpha=1;
@@ -857,6 +906,50 @@ function close(){ shopOpen=false; el.classList.remove('open'); }
  $('#dShop').onclick=open;
  $('#shopClose').onclick=close;
 
+ /* ==================== [P9-ALBUM] вкладка наклеек ==================== */
+const AG=$('#albGrid'), hint=$('.shopHint'), tC=$('#tabCost'), tA=$('#tabAlb');
+function stats(){
+  const a=(store.get('puntik_stats','0,0,0,0,0,0,0')||'').split(',');
+  while(a.length<7)a.push('0');
+  return a.map(Number);
+}
+function bump(i){ const a=stats(); a[i]=(a[i]||0)+1; store.set('puntik_stats',a.join(',')); }
+const STK=[
+ {e:'🍩', n:'Пончик',   need:()=>[stats()[0],10]},
+ {e:'⭐', n:'Звезда',   need:()=>[stats()[1],10]},
+ {e:'🎈', n:'Шарик',    need:()=>[stats()[2],10]},
+ {e:'🍭', n:'Леденец',  need:()=>[stats()[3],10]},
+ {e:'🌈', n:'Радуга',   need:()=>[stats()[5],1]},
+ {e:'🚀', n:'Ракета',   need:()=>[stats()[5],10]},
+ {e:'🍩', n:'Золотой',  gold:1, need:()=>[stats()[4],3]},
+ {e:'☁️', n:'Прыгун',   need:()=>[stats()[6],25]},
+ {e:'🏆', n:'Чемпион',  need:()=>[+store.get('puntik_best','0')||0,50]},
+ {e:'🎩', n:'Модник',   need:()=>[Math.max(0,owned.length-1),1]},
+ {e:'🦄', n:'Единорог', need:()=>[Math.max(0,owned.length-1),4]},
+ {e:'👑', n:'Король',   need:()=>[Math.max(0,owned.length-1),7]}
+];
+function renderAlbum(){
+  AG.innerHTML=STK.map(s=>{
+    const v=s.need(), ok=v[0]>=v[1];
+    return `<div class="acard ${ok?'on':''}">
+      <div class="ast ${s.gold?'gold':''}">${ok?s.e:'🔒'}</div>
+      <h4>${s.n}</h4><span class="pr">${ok?'МОЯ ✓':(Math.min(v[0],v[1])+'/'+v[1])}</span>
+    </div>`;}).join('');
+}
+tC.onclick=()=>{ tC.classList.add('on'); tA.classList.remove('on');
+  AG.style.display='none'; grid.style.display='grid';
+  hint.textContent='Лови 🍩 в игре — и покупай наряды!'; S.ui(); };
+tA.onclick=()=>{ tA.classList.add('on'); tC.classList.remove('on');
+  AG.style.display='grid'; grid.style.display='none';
+  hint.textContent='Лови вкусняшки — собирай наклейки!'; renderAlbum(); S.ui(); };
+HOOKS.collect=(e,v,gold)=>{
+  const i={'🍩':0,'⭐':1,'🎈':2,'🍭':3}[e];
+  if(i!==undefined) bump(i);
+  if(gold) bump(4);
+};
+HOOKS.launch=(c)=>{ bump(6); if(c>=.99) bump(5); };
+/* ==================== [/P9-ALBUM] ==================== */
+
 function confettiFrom(cd){
   const cols=['#FF6B6B','#FFD93D','#4EE0A8','#3FC5F0','#A66BFF','#FF7BAC'];
   const r=cd.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
@@ -938,7 +1031,37 @@ if(!store.get('puntik_tut','')) setTimeout(()=>run(false),900);   /* первы�
 return {run};
 })();
 /* ==================== [/P3-TUT] ==================== */
-
+/* ==================== [P9-DAILY] ежедневный бонус ==================== */
+(function(){
+function today(){ const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function confetti(){
+  const cols=['#FF6B6B','#FFD93D','#4EE0A8','#3FC5F0','#A66BFF','#FF7BAC'];
+  const r=$('#game').getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height*.35;
+  for(let i=0;i<50;i++){ const d=document.createElement('div'); d.className='conf';
+    d.style.left=cx+'px'; d.style.top=cy+'px'; d.style.background=cols[i%cols.length];
+    d.style.borderRadius=i%3?'3px':'50%'; document.body.appendChild(d);
+    const a=Math.random()*6.28, s=120+Math.random()*320;
+    d.animate([{transform:'translate(0,0) rotate(0)',opacity:1},
+      {transform:`translate(${Math.cos(a)*s}px,${Math.sin(a)*s+260}px) rotate(${Math.random()*900}deg)`,opacity:0}],
+      {duration:1100+Math.random()*700,easing:'cubic-bezier(.2,.7,.4,1)'}).onfinish=()=>d.remove();
+  }
+}
+function check(){
+  const t=today(), last=store.get('puntik_lastday','');
+  if(!t||last===t) return;               /* уже получен сегодня */
+  wallet+=30; store.set('puntik_wallet',wallet); store.set('puntik_lastday',t);
+  VKS.track('daily_bonus');
+  const ov=document.createElement('div'); ov.className='daily';
+  ov.innerHTML=`<div class="dcard"><div class="dico">🍩</div>
+    <div class="dtxt">+30 пончиков!</div><div class="dsub">Заходи завтра 😄</div></div>`;
+  $('#game').appendChild(ov);
+  confetti(); S.init(); S.cheer();
+  setTimeout(()=>{ ov.classList.add('hide'); setTimeout(()=>ov.remove(),500); },2600);
+}
+setTimeout(check,800);
+})();
+/* ==================== [/P9-DAILY] ==================== */
 /* [FIX-2 BOOT] старт немедленно: DOM готов, CSS уже загружен.
    Ждать window.load было гонкой — цикл успевал стартовать раньше init */
 D.init();

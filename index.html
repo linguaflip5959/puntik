@@ -780,8 +780,12 @@ gel.querySelector('.gclose').onclick=()=>{ gel.classList.remove('show'); S.ui();
 function showAd(){
   if(VKS.ready){
     const p=VKS.send('VKWebAppShowNativeAds',{ad_format:'reward'});
-    if(p&&p.then) p.then(r=>{ (r&&r.result)?grant():fail(); }).catch(fail);
-    else fail();
+    let done=false;                               /* [P8-ADTIMEOUT] страховка от зависания моста */
+    const finish=r=>{ if(done)return; done=true; (r&&r.result)?grant():fail(); };
+    const tm=setTimeout(()=>finish(null),60000);  /* 60с — ребёнок не ждёт дольше */
+    if(p&&p.then) p.then(r=>{ clearTimeout(tm); finish(r); })
+                   .catch(()=>{ clearTimeout(tm); finish(null); });
+    else finish(null);
     return;
   }
   fakeAd();                                  /* браузер: тестовый ролик */

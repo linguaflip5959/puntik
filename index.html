@@ -811,11 +811,9 @@ function toast(msg){
 const lbBtn=$('#dLB');
 if(lbBtn) lbBtn.onclick=()=>{
   S.init(); S.ui(); VKS.track('leaderboard_open');
-  /* таблицы лидеров ВК не поддерживаются в desktop_web — только мобильные клиенты */
-  const plat=((location.search.match(/vk_platform=([a-z_]+)/)||[])[1])||'';
-  if(plat==='desktop_web'){ toast('🏆 Таблица лидеров — в мобильном ВК'); return; }
+  /* docs VK: имя — VKWebAppShowLeaderBoardBox (большая B), Web поддерживается */
   const res=Math.max(1,+store.get('puntik_best','0')||0);
-  const p=VKS.send('VKWebAppShowLeaderboardBox',{user_result:res});
+  const p=VKS.send('VKWebAppShowLeaderBoardBox',{user_result:res,global:0});
   if(!p||!p.then) toast('🏆 Лидеры — только в ВК');
   else p.catch(()=>toast('🏆 Лидерборд недоступен'));
 };

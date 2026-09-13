@@ -128,6 +128,13 @@ body{background:#221A4E;font-family:'Nunito',system-ui,sans-serif;display:flex;a
   background:#fff;border:3px solid var(--ink);border-radius:999px;padding:8px 16px;
   font-weight:900;font-size:14px;box-shadow:0 4px 0 var(--ink)}
 /* ==================== [/P6-GATE CSS] ==================== */
+/* ==================== [P7-VKUI CSS] прячем HUD от шапки клиента ВК ==================== */
+@media (max-width:540px){
+  .dhud{top:calc(56px + env(safe-area-inset-top))}
+  .dbtns{top:calc(56px + env(safe-area-inset-top))}
+  #shop{padding-top:calc(56px + env(safe-area-inset-top))}
+}
+/* ==================== [/P7-VKUI CSS] ==================== */
 
 /* ==================== [/P3-TUT CSS] ==================== */
 .blink{animation:blink 4.6s infinite}
@@ -201,14 +208,17 @@ const VKS={
     if(!this.inVK) return;                  /* обычный браузер: облако не нужно */
     this.ready=true;
     this.send('VKWebAppInit',{});
-    this.send('VKWebAppSetViewSettings',{status_bar_style:'light'});
+    this.send('VKWebAppSetViewSettings',{status_bar_style:'dark',
+      action_bar_color:'#4FC3F7', navigation_bar_color:'#63DD8B'});
     this.pull(); this.flushNow();           /* стартовый обмен облако↔устройство */
     this.track('session_start');
   },
   send(ev,params){ if(!this.ready) return null;
     try{ const p=this.bridge.send(ev,params); if(p&&p.catch) p.catch(()=>{}); return p; }
     catch(e){ return null; } },
-  track(name){ this.send('VKWebAppTrackEvent',{event:name}); },
+    track(name){ this.send('VKWebAppTrackEvent',{
+    event_name:name,
+    custom_user_id:((location.search.match(/vk_user_id=(\d+)/)||[])[1])||undefined }); },
   dirty(k){ if(SYNC_KEYS.indexOf(k)<0) return;
     this.dirtyKeys[k]=1; clearTimeout(this.flushT);
     this.flushT=setTimeout(()=>this.flushNow(),3500); },

@@ -757,7 +757,8 @@ function open(c,cd){
   const bs=gel.querySelector('.gbtns'); bs.innerHTML='';
   opts.forEach(v=>{ const d=document.createElement('button'); d.className='gbtn';
     d.textContent=v; d.onclick=()=>answer(v===sum); bs.appendChild(d); });
-  gel.classList.add('show'); S.ui();
+    gel.classList.add('show'); S.ui();
+  VKS.send('VKWebAppCheckNativeAds',{ad_format:'reward'});  /* ролик грузится, пока родитель решает пример */
 }
 function answer(ok){
   if(ok){ S.ding(3); gel.classList.remove('show'); showAd(); }
@@ -768,8 +769,13 @@ gel.querySelector('.gclose').onclick=()=>{ gel.classList.remove('show'); S.ui();
 
 function showAd(){
   if(VKS.ready){
-    const p=VKS.send('VKWebAppShowNativeAd',{ad_format:'reward'});
-    if(p&&p.then) p.then(r=>{ (r&&r.result)?grant():fail(); }).catch(fail);
+    /* официальное имя: VKWebAppShowNativeAds (с "s") — docs VK */
+    const p=VKS.send('VKWebAppShowNativeAds',{ad_format:'reward'});
+    if(p&&p.then)
+      p.then(r=>{ console.warn('[PUNTIK] rewarded ответ:', JSON.stringify(r));
+                   (r&&r.result)?grant():fail(); })
+       .catch(e=>{ console.warn('[PUNTIK] rewarded ошибка:', JSON.stringify(e), e&&e.message);
+                   fail(); });
     else fail();
     return;
   }
@@ -812,8 +818,11 @@ if(lbBtn) lbBtn.onclick=()=>{
   S.init(); S.ui(); VKS.track('leaderboard_open');
   const res=Math.max(1,+store.get('puntik_best','0')||0);
   const p=VKS.send('VKWebAppShowLeaderboardBox',{user_result:res});
+  console.warn('[PUNTIK] leaderboard: запрос ушёл', p?'ok':'bridge молчит');
   if(!p||!p.then) toast('🏆 Лидеры — только в ВК');
-  else p.catch(()=>toast('🏆 Лидерборд недоступен'));
+  else p.then(r=>console.warn('[PUNTIK] leaderboard ответ:', JSON.stringify(r)))
+        .catch(e=>{ console.warn('[PUNTIK] leaderboard ошибка:', JSON.stringify(e), 'msg:', e&&e.message);
+          toast('🏆 Лидерборд недоступен'); });
 };
 
 function tap(cd){

@@ -769,13 +769,8 @@ gel.querySelector('.gclose').onclick=()=>{ gel.classList.remove('show'); S.ui();
 
 function showAd(){
   if(VKS.ready){
-    /* официальное имя: VKWebAppShowNativeAds (с "s") — docs VK */
     const p=VKS.send('VKWebAppShowNativeAds',{ad_format:'reward'});
-    if(p&&p.then)
-      p.then(r=>{ console.warn('[PUNTIK] rewarded ответ:', JSON.stringify(r));
-                   (r&&r.result)?grant():fail(); })
-       .catch(e=>{ console.warn('[PUNTIK] rewarded ошибка:', JSON.stringify(e), e&&e.message);
-                   fail(); });
+    if(p&&p.then) p.then(r=>{ (r&&r.result)?grant():fail(); }).catch(fail);
     else fail();
     return;
   }
@@ -816,13 +811,13 @@ function toast(msg){
 const lbBtn=$('#dLB');
 if(lbBtn) lbBtn.onclick=()=>{
   S.init(); S.ui(); VKS.track('leaderboard_open');
+  /* таблицы лидеров ВК не поддерживаются в desktop_web — только мобильные клиенты */
+  const plat=((location.search.match(/vk_platform=([a-z_]+)/)||[])[1])||'';
+  if(plat==='desktop_web'){ toast('🏆 Таблица лидеров — в мобильном ВК'); return; }
   const res=Math.max(1,+store.get('puntik_best','0')||0);
   const p=VKS.send('VKWebAppShowLeaderboardBox',{user_result:res});
-  console.warn('[PUNTIK] leaderboard: запрос ушёл', p?'ok':'bridge молчит');
   if(!p||!p.then) toast('🏆 Лидеры — только в ВК');
-  else p.then(r=>console.warn('[PUNTIK] leaderboard ответ:', JSON.stringify(r)))
-        .catch(e=>{ console.warn('[PUNTIK] leaderboard ошибка:', JSON.stringify(e), 'msg:', e&&e.message);
-          toast('🏆 Лидерборд недоступен'); });
+  else p.catch(()=>toast('🏆 Лидерборд недоступен'));
 };
 
 function tap(cd){

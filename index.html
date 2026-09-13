@@ -92,6 +92,43 @@ body{background:#221A4E;font-family:'Nunito',system-ui,sans-serif;display:flex;a
   30%{opacity:1;transform:translateX(-50%) scale(1.15)}
   70%{opacity:1;transform:translateX(-50%) scale(1)}
   100%{opacity:0;transform:translateX(-50%) translateY(-34px)}}
+
+/* ==================== [P6-GATE CSS] ==================== */
+.dchip.lb{cursor:pointer}
+.dchip.lb:active{transform:translateY(2px)}
+#gate{position:absolute;inset:0;z-index:20;background:rgba(59,42,122,.5);
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  opacity:0;pointer-events:none;transition:opacity .25s}
+#gate.show{opacity:1;pointer-events:auto}
+.gcard{position:relative;background:#FFF7E8;border:5px solid var(--ink);border-radius:26px;
+  box-shadow:0 10px 0 var(--ink);padding:20px 20px 22px;max-width:330px;width:100%;text-align:center}
+.gcard.shake{animation:shake .45s}
+.gclose{position:absolute;right:10px;top:10px;width:36px;height:36px;border-radius:50%;
+  border:3px solid var(--ink);background:#fff;font-size:15px;font-weight:900;cursor:pointer;
+  box-shadow:0 3px 0 var(--ink)}
+.gclose:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.gico{font-size:32px;margin-bottom:2px}
+.gcard h3{font-size:17px;margin-bottom:4px}
+.gcard p{font-size:12.5px;font-weight:700;color:#8A7BB8;margin-bottom:10px}
+.gq{font-family:'Comfortaa','Nunito',system-ui,sans-serif;font-weight:700;font-size:26px;
+  background:#fff;border:3px solid var(--ink);border-radius:16px;padding:6px;margin-bottom:12px}
+.gbtns{display:flex;gap:8px;justify-content:center}
+.gbtn{font-family:'Comfortaa','Nunito',system-ui,sans-serif;font-weight:700;font-size:20px;
+  flex:1;max-width:70px;height:50px;border:3px solid var(--ink);border-radius:14px;
+  background:var(--sun);cursor:pointer;box-shadow:0 4px 0 var(--ink)}
+.gbtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+#fakeAd{position:absolute;inset:0;z-index:30;background:#1E1547;color:#fff;
+  display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;
+  transition:opacity .3s}
+#fakeAd.show{opacity:1;pointer-events:auto}
+.fcard{text-align:center;font-weight:900;font-size:20px}
+.fcard .fn{font-size:60px;font-family:'Comfortaa','Nunito',system-ui,sans-serif;
+  color:var(--sun);margin-top:6px}
+.gtoast{position:absolute;left:50%;top:16%;transform:translateX(-50%);z-index:40;
+  background:#fff;border:3px solid var(--ink);border-radius:999px;padding:8px 16px;
+  font-weight:900;font-size:14px;box-shadow:0 4px 0 var(--ink)}
+/* ==================== [/P6-GATE CSS] ==================== */
+
 /* ==================== [/P3-TUT CSS] ==================== */
 .blink{animation:blink 4.6s infinite}
 @keyframes blink{0%,94%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.08)}}
@@ -106,7 +143,7 @@ body{background:#221A4E;font-family:'Nunito',system-ui,sans-serif;display:flex;a
   <div id="dchar"></div>
   <div class="dhud">
     <div class="dchip b">🍩 <span id="dScore">0</span></div>
-    <div class="dchip">🏆 <span id="dBest">0</span></div>
+    <div class="dchip lb" id="dLB" title="Лидеры">🏆 <span id="dBest">0</span></div>
     <div class="dchip" id="dCombo" style="display:none">🔥 ×<span id="dComboN">2</span></div>
   </div>
   <div class="dbtns">
@@ -487,7 +524,7 @@ function launch(){
 function pos(e){ const r=box.getBoundingClientRect();
  ptr.x=e.clientX-r.left; ptr.y=e.clientY-r.top; }
 function down(e){
- if(shopOpen||(e.target.closest&&(e.target.closest('.dbtn')||e.target.closest('#shop')))) return; /* магазин и кнопки не перехватываем */
+ if(shopOpen||(e.target.closest&&(e.target.closest('.dbtn')||e.target.closest('#shop')||e.target.closest('.lb')))) return; /* магазин, кнопки, лидерборд — не перехватываем */
  e.preventDefault(); S.init();
  try{ box.setPointerCapture(e.pointerId); }catch(_){}
  pos(e); ptr.down=true;
@@ -657,8 +694,8 @@ const COSTS=[
  {id:'unicorn', n:'Единорожка',   price:320,  body:'#FF9FD2', dark:'#E463AC', belly:'#FFE3F1'},
  {id:'hero',    n:'Супер-Пунт',   price:450,  body:'#5BC3FF', dark:'#2A8FD6', belly:'#DFF2FF'},
  {id:'pirate',  n:'Капитан Понк', price:600,  body:'#FFB03A', dark:'#E08A12'},
- {id:'chef',    n:'Пончик-шеф',   price:800,  body:'#FFF3E0', dark:'#E8CFA8', belly:'#FFFDF6'},
- {id:'bee',     n:'Жужа',         price:1000, body:'#FFD93D', dark:'#E8A800'}
+ {id:'chef',    n:'Пончик-шеф',   video:1,    body:'#FFF3E0', dark:'#E8CFA8', belly:'#FFFDF6'},
+ {id:'bee',     n:'Жужа',         video:1,    body:'#FFD93D', dark:'#E8A800'}
 ];
 /* TODO (патч VK Bridge): chef/bee перевести на rewarded-видео */
 
@@ -684,15 +721,108 @@ function render(){
       ${isEq?'<div class="badge">✓</div>':''}
       <div class="av"><div>${charHTML(c,false)}</div></div>
       <h4>${c.n}</h4>
-      <span class="pr">${isEq?'НАДЕТ':(isOwn?'МОЙ ✓':'🍩 '+c.price)}</span>
+            <span class="pr">${isEq?'НАДЕТ':(isOwn?'МОЙ ✓':(c.video?'🎬 РОЛИК':'🍩 '+c.price))}</span>
     </div>`;}).join('');
   grid.querySelectorAll('.scard').forEach(cd=>cd.onclick=()=>tap(cd));
 }
+/* ==================== [P6-REWARDED] гейт + ролики + лидерборд ==================== */
+const GATE=(function(){
+const game=$('#game');
+const gel=document.createElement('div'); gel.id='gate';
+gel.innerHTML=`
+  <div class="gcard">
+    <button class="gclose" id="gateClose">✕</button>
+    <div class="gico">🎬</div>
+    <h3>Привет, родитель! 👋</h3>
+    <p>Костюм открывается за просмотр ролика. Подтвердите, что вы взрослый:</p>
+    <div class="gq" id="gateQ"></div>
+    <div class="gbtns" id="gateBtns"></div>
+  </div>`;
+game.appendChild(gel);
+const fad=document.createElement('div'); fad.id='fakeAd';
+fad.innerHTML=`<div class="fcard">📺<div>ТЕСТОВАЯ РЕКЛАМА</div><div class="fn" id="fakeN">3</div></div>`;
+game.appendChild(fad);
+
+let pending=null, card=null, timers=[];
+function open(c,cd){
+  pending=c; card=cd;
+  const a=2+Math.floor(Math.random()*4), b=2+Math.floor(Math.random()*4), sum=a+b;
+  const wrongs=new Set();
+  while(wrongs.size<3){
+    const w=sum+(Math.random()<.5?-1:1)*(1+Math.floor(Math.random()*3));
+    if(w>0&&w!==sum) wrongs.add(w);
+  }
+  const opts=[...wrongs,sum].sort(()=>Math.random()-.5);
+  gel.querySelector('.gq').textContent=a+' + '+b+' = ?';
+  const bs=gel.querySelector('.gbtns'); bs.innerHTML='';
+  opts.forEach(v=>{ const d=document.createElement('button'); d.className='gbtn';
+    d.textContent=v; d.onclick=()=>answer(v===sum); bs.appendChild(d); });
+  gel.classList.add('show'); S.ui();
+}
+function answer(ok){
+  if(ok){ S.ding(3); gel.classList.remove('show'); showAd(); }
+  else{ const gc=gel.querySelector('.gcard'); gc.classList.add('shake');
+    setTimeout(()=>gc.classList.remove('shake'),450); S.boing(.05); }
+}
+gel.querySelector('.gclose').onclick=()=>{ gel.classList.remove('show'); S.ui(); };
+
+function showAd(){
+  if(VKS.ready){
+    const p=VKS.send('VKWebAppShowNativeAd',{ad_format:'reward'});
+    if(p&&p.then) p.then(r=>{ (r&&r.result)?grant():fail(); }).catch(fail);
+    else fail();
+    return;
+  }
+  fakeAd();                                  /* браузер: тестовый ролик */
+}
+function fakeAd(){
+  fad.classList.add('show');
+  let k=3; fad.querySelector('.fn').textContent=k; S.ui();
+  timers.forEach(clearTimeout); timers=[];
+  timers.push(setTimeout(function tick(){
+    k--;
+    if(k>0){ fad.querySelector('.fn').textContent=k; S.ui(); timers.push(setTimeout(tick,900)); }
+    else{ fad.classList.remove('show'); grant(); }
+  },900));
+}
+function grant(){
+  if(!pending) return;
+  const c=pending; pending=null;
+  owned.push(c.id); eq=c.id; save(); applyCostume(c.id);
+  S.cheer(); confettiFrom(card); render();
+  VKS.track('video_costume');
+  setTimeout(close,700);
+}
+function fail(){
+  if(card){ card.classList.add('shake');
+    setTimeout(()=>card.classList.remove('shake'),460); }
+  S.boing(.05);
+}
+return {open};
+})();
+
+/* тост — маленькое уведомление сверху */
+function toast(msg){
+  const t=document.createElement('div'); t.className='gtoast'; t.textContent=msg;
+  $('#game').appendChild(t); setTimeout(()=>t.remove(),1900);
+}
+/* лидерборд: тап по чипу 🏆 */
+const lbBtn=$('#dLB');
+if(lbBtn) lbBtn.onclick=()=>{
+  S.init(); S.ui(); VKS.track('leaderboard_open');
+  const res=Math.max(1,+store.get('puntik_best','0')||0);
+  const p=VKS.send('VKWebAppShowLeaderboardBox',{user_result:res});
+  if(!p||!p.then) toast('🏆 Лидеры — только в ВК');
+  else p.catch(()=>toast('🏆 Лидерборд недоступен'));
+};
+
 function tap(cd){
   const id=cd.dataset.id, c=COSTS.find(x=>x.id===id);
   S.init();
   if(owned.includes(id)){                       /* уже наш — надеваем */
     eq=id; save(); applyCostume(id); S.ui(); S.cheer(); confettiFrom(cd); close();
+  } else if(c.video){                           /* 🎬 костюм за ролик */
+    GATE.open(c,cd);
   } else if(wallet>=c.price){                   /* покупаем */
     wallet-=c.price; store.set('puntik_wallet',wallet); VKS.track('costume_bought');
     owned.push(id); eq=id; save(); applyCostume(id);
@@ -705,6 +835,7 @@ function tap(cd){
     setTimeout(()=>w.classList.remove('pulse'),460);
   }
 }
+/* ==================== [/P6-REWARDED] ==================== */
 function open(){ S.init(); shopOpen=true; render(); el.classList.add('open'); S.ui(); }
 function close(){ shopOpen=false; el.classList.remove('open'); }
  $('#dShop').onclick=open;

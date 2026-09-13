@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3FC5F0">
+<title>ПУНТИК — прыгает до самых облаков!</title>
+<!-- [P4-FAVICON] пончик вместо 404 -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='29' fill='%23FF8A3D' stroke='%233B2A7A' stroke-width='5'/%3E%3Ccircle cx='32' cy='32' r='11' fill='%23FFF7E8' stroke='%233B2A7A' stroke-width='5'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<!-- [P4-FONTS] шрифты в фоне: CDN тормозит/умер — системные, игра не ждёт -->
+<link href="https://cdn.jsdelivr.net/fontsource/css/comfortaa@latest/index.css" rel="stylesheet" media="print" onload="this.media='all'">
+<link href="https://cdn.jsdelivr.net/fontsource/css/nunito@latest/index.css" rel="stylesheet" media="print" onload="this.media='all'">
+<style>
+:root{--ink:#3B2A7A;--sun:#FFD93D}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:#221A4E;font-family:'Nunito',system-ui,sans-serif;display:flex;align-items:center;
+  justify-content:center;overflow:hidden;overscroll-behavior:none}
+#game{position:relative;width:100%;max-width:480px;height:100vh;height:100dvh;overflow:hidden;
+  touch-action:none;user-select:none;-webkit-user-select:none;
+  background:linear-gradient(180deg,#4FC3F7,#9BE7FF 55%,#DFF6FF)}
+@media(min-width:540px){
+  #game{height:min(94vh,920px);border:5px solid var(--ink);border-radius:36px;
+    box-shadow:0 24px 60px rgba(0,0,0,.55)}
+}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#dchar{position:absolute;left:0;top:0;width:96px;height:96px;margin:-48px 0 0 -48px;z-index:3;
+  will-change:transform;pointer-events:none}
+.dhud{position:absolute;left:calc(10px + env(safe-area-inset-left));top:calc(10px + env(safe-area-inset-top));
+  z-index:5;display:flex;gap:7px;flex-wrap:wrap}
+.dchip{background:#fff;border:3px solid var(--ink);border-radius:999px;padding:5px 12px;
+  font-weight:900;font-size:14px;box-shadow:0 4px 0 var(--ink)}
+.dchip.b{background:var(--sun)}
+.dbtns{position:absolute;right:calc(10px + env(safe-area-inset-right));top:calc(10px + env(safe-area-inset-top));
+  z-index:6;display:flex;gap:7px}
+.dbtn{width:40px;height:40px;border-radius:50%;border:3px solid var(--ink);background:#fff;font-size:16px;
+  cursor:pointer;box-shadow:0 4px 0 var(--ink)}
+.dbtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.dtap{position:absolute;left:0;right:0;bottom:calc(12px + env(safe-area-inset-bottom));z-index:5;
+  text-align:center;padding:10px;font-weight:900;font-size:15px;color:#fff;
+  text-shadow:0 2px 0 rgba(0,0,0,.35);pointer-events:none;transition:opacity .3s}
+.dtap.hide{opacity:0}
+/* ==================== [P2-SHOP CSS] ==================== */
+#shop{position:absolute;inset:0;z-index:10;touch-action:pan-y;overflow-y:auto;
+  background:linear-gradient(180deg,#FFE9F3,#FFF7E8);
+  padding:calc(12px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom));
+  transform:translateY(102%);transition:transform .32s cubic-bezier(.2,.9,.3,1)}
+#shop.open{transform:none}
+.shopHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+.wallet{background:#FFD93D;border:3px solid var(--ink);border-radius:999px;padding:7px 16px;
+  font-weight:900;font-size:18px;box-shadow:0 4px 0 var(--ink)}
+.wallet.pulse{animation:wpulse .45s}
+@keyframes wpulse{50%{transform:scale(1.18)}}
+.shopClose{width:46px;height:46px;border-radius:50%;border:3px solid var(--ink);background:#fff;
+  font-size:19px;font-weight:900;cursor:pointer;box-shadow:0 4px 0 var(--ink);flex:0 0 46px}
+.shopClose:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.shopTitle{font-family:'Comfortaa','Nunito',sans-serif;font-weight:700;font-size:21px;margin:2px 2px 4px}
+.shopHint{font-size:12.5px;font-weight:700;color:#8A7BB8;margin:0 2px 10px}
+.shopGrid{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.scard{background:#fff;border:4px solid var(--ink);border-radius:20px;padding:9px 8px 11px;
+  text-align:center;box-shadow:0 6px 0 var(--ink);cursor:pointer;position:relative;transition:transform .12s}
+.scard:active{transform:translateY(3px);box-shadow:0 3px 0 var(--ink)}
+.scard .av{width:100%;aspect-ratio:1/.82;border-radius:14px;border:3px solid var(--ink);
+  background:radial-gradient(circle at 50% 30%,#FFF6E2,#FFE3C2);display:grid;place-items:center;margin-bottom:7px}
+.scard .av>div{width:84%}
+.scard h4{font-size:14px;margin-bottom:5px;font-weight:900}
+.scard .pr{display:inline-block;font-size:12.5px;font-weight:900;background:#FFD93D;border:2.5px solid var(--ink);
+  border-radius:999px;padding:2px 10px}
+.scard.own .pr{background:#4EE0A8}
+.scard.eq{background:#EDFFF6;border-color:#2FA957;box-shadow:0 6px 0 #2FA957}
+.scard.eq .pr{background:#4EE0A8}
+.scard.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.badge{position:absolute;right:-8px;top:-8px;width:30px;height:30px;border-radius:50%;background:#4EE0A8;
+  border:3px solid var(--ink);display:grid;place-items:center;font-size:15px;font-weight:900;color:#fff;z-index:2}
+.conf{position:fixed;width:10px;height:10px;z-index:99;pointer-events:none;border-radius:3px}
+/* ==================== [P3-TUT CSS] ==================== */
+#tut{position:absolute;left:50%;bottom:128px;width:72px;margin-left:-36px;z-index:7;
+  pointer-events:none;opacity:0;transition:opacity .3s,left .45s ease,bottom .45s ease}
+#tut.show{opacity:1}
+#tut.steer{bottom:42%}
+.tutHand{transition:transform .22s cubic-bezier(.3,1.4,.5,1);transform:translateY(-8px)}
+#tut.press .tutHand{transform:translateY(16px)}
+.tutRing{position:absolute;left:50%;bottom:-8px;width:64px;height:64px;margin-left:-32px;
+  border:5px solid var(--ink);border-radius:50%;opacity:0}
+#tut.press .tutRing{animation:tutring .85s ease-out infinite}
+@keyframes tutring{0%{transform:scale(.45);opacity:.85}75%,100%{transform:scale(1.2);opacity:0}}
+.tutDone{position:absolute;left:50%;top:26%;font-size:46px;z-index:8;pointer-events:none;
+  transform:translateX(-50%);animation:tutdone 1.5s ease forwards}
+@keyframes tutdone{0%{opacity:0;transform:translateX(-50%) scale(.4)}
+  30%{opacity:1;transform:translateX(-50%) scale(1.15)}
+  70%{opacity:1;transform:translateX(-50%) scale(1)}
+  100%{opacity:0;transform:translateX(-50%) translateY(-34px)}}
+/* ==================== [/P3-TUT CSS] ==================== */
+.blink{animation:blink 4.6s infinite}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.08)}}
+.prop{transform-origin:50% 50%;animation:spin .35s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.blink,.prop{animation:none!important}}
+</style>
+</head>
+<body>
+<div id="game">
+  <canvas id="cv"></canvas>
+  <div id="dchar"></div>
+  <div class="dhud">
+    <div class="dchip b">🍩 <span id="dScore">0</span></div>
+    <div class="dchip">🏆 <span id="dBest">0</span></div>
+    <div class="dchip" id="dCombo" style="display:none">🔥 ×<span id="dComboN">2</span></div>
+  </div>
+  <div class="dbtns">
+    <button class="dbtn" id="dReset" title="Заново">↻</button>
+    <button class="dbtn" id="dTut" title="Как играть">❓</button>
+    <button class="dbtn" id="dShop" title="Костюмы">🎩</button>
+    <button class="dbtn" id="dSnd" title="Звук">🔊</button>
+  </div>
+  <div class="dtap" id="dTap">👇 Зажми — и отпусти!</div>
+  <!-- [P2-SHOP] витрина костюмов -->
+<div id="shop">
+  <div class="shopHead">
+    <div class="wallet">🍩 <span id="walletN">0</span></div>
+    <button class="shopClose" id="shopClose">✕</button>
+  </div>
+  <div class="shopTitle">🎩 Костюмы</div>
+  <div class="shopHint">Лови 🍩 в игре — и покупай наряды!</div>
+  <div class="shopGrid" id="shopGrid"></div>
+</div>
+</div>
+<script>
+(function(){
+'use strict';
+const $=s=>document.querySelector(s);
+const INK='#3B2A7A';
+
+/* ==================== [P4-VK] хранилище + VK Bridge ==================== */
+const HOOKS={};   /* хуки модулей для облачной синхронизации */
+const SYNC_KEYS=['puntik_best','puntik_wallet','puntik_owned','puntik_costume','puntik_tut'];
+const store={
+  get(k,d){ try{ const v=localStorage.getItem(k); return v===null?d:v; }catch(e){ return d; } },
+  set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} VKS.dirty(k); }
+};
+const VKS={
+  bridge:null, inVK:false, ready:false, dirtyKeys:{}, flushT:null,
+  start(){
+    this.load([
+      'https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js',
+      'https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge/dist/browser.min.js'
+    ],0);
+    window.addEventListener('pagehide',()=>this.flushNow());
+    document.addEventListener('visibilitychange',()=>{ if(document.hidden) this.flushNow(); });
+  },
+  load(urls,i){
+    if(i>=urls.length) return;              /* CDN недоступны — офлайн, и норм */
+    const s=document.createElement('script'), self=this;
+    s.src=urls[i];
+    s.onload=()=>{ try{ self.boot(); }catch(e){} };
+    s.onerror=()=>{ self.load(urls,i+1); };
+    document.head.appendChild(s);
+  },
+  boot(){
+    this.bridge=window.vkBridge; if(!this.bridge) return;
+    this.inVK=!this.bridge.isEmbedded||this.bridge.isEmbedded();
+    if(!this.inVK) return;                  /* обычный браузер: облако не нужно */
+    this.ready=true;
+    this.send('VKWebAppInit',{});
+    this.send('VKWebAppSetViewSettings',{status_bar_style:'light'});
+    this.pull(); this.flushNow();           /* стартовый обмен облако↔устройство */
+    this.track('session_start');
+  },
+  send(ev,params){ if(!this.ready) return null;
+    try{ const p=this.bridge.send(ev,params); if(p&&p.catch) p.catch(()=>{}); return p; }
+    catch(e){ return null; } },
+  track(name){ this.send('VKWebAppTrackEvent',{event:name}); },
+  dirty(k){ if(SYNC_KEYS.indexOf(k)<0) return;
+    this.dirtyKeys[k]=1; clearTimeout(this.flushT);
+    this.flushT=setTimeout(()=>this.flushNow(),3500); },
+  flushNow(){ if(!this.ready) return;
+    const ks=Object.keys(this.dirtyKeys); this.dirtyKeys={};
+    ks.forEach(k=>{ const v=store.get(k,'');
+      if(v!=='') this.send('VKWebAppStorageSet',{key:k,value:String(v)}); }); },
+  pull(){
+    const p=this.send('VKWebAppStorageGet',{keys:SYNC_KEYS});
+    if(!p||!p.then) return;
+    const self=this;
+    p.then(r=>{ try{
+      if(!r||!r.keys) return;
+      const map={};
+      r.keys.forEach(x=>{ if(x&&x.value!==undefined) map[x.key]=x.value; });
+      self.apply(map);
+    }catch(e){} }).catch(()=>{});
+  },
+  apply(map){ try{
+    if(map.puntik_best!==undefined){
+      const cb=+map.puntik_best||0, lb=+store.get('puntik_best','0')||0;
+      if(cb>lb){ store.set('puntik_best',String(cb)); D.setBest(cb); }
+    }
+    if(map.puntik_wallet!==undefined){
+      const cw=+map.puntik_wallet||0, lw=+store.get('puntik_wallet','0')||0;
+      if(cw>lw){ wallet=cw; store.set('puntik_wallet',String(cw)); }
+    }
+    if(map.puntik_tut==='1'&&!store.get('puntik_tut','')) store.set('puntik_tut','1');
+    if(map.puntik_owned!==undefined||map.puntik_costume!==undefined){
+      const cloud=(map.puntik_owned||'').split(',').filter(Boolean);
+      if(cloud.length||map.puntik_costume){
+        if(HOOKS.shopMerge) HOOKS.shopMerge(cloud,map.puntik_costume||'');
+      }
+    }
+    this.track('storage_applied');
+  }catch(e){} }
+};
+VKS.start();
+/* ==================== [/P4-VK] ==================== */
+
+/* ============ 1. КОНСТРУКТОР ПЕРСОНАЖА (SVG) ============ */
+let uid=0;
+function puntik(o){
+  o=o||{};
+  const id='p'+(++uid);
+  const body=o.body||'#FF9A2E', bodyD=o.dark||'#EF6C15', belly=o.belly||'#FFD9A0';
+  const cost=o.costume||'';
+  const ex=o.ex||0, ey=o.ey||0;
+  const mouth=o.mouth===undefined?1:o.mouth;
+  let extra='', behind='';
+
+  if(cost==='astro'){
+    behind+=`<circle cx="100" cy="104" r="76" fill="#BFEFFF" opacity=".33"/>
+      <circle cx="100" cy="104" r="76" fill="none" stroke="#fff" stroke-width="7" opacity=".85"/>
+      <path d="M46 168 h108 l-10 22 h-88 z" fill="#F2F5FF" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>`;
+  }
+  if(cost==='pirate'){
+    extra+=`<path d="M36 66 Q100 6 164 66 Q150 44 100 40 Q50 44 36 66Z" fill="#E23B3B" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>
+      <circle cx="70" cy="52" r="6" fill="#fff"/><circle cx="118" cy="48" r="6" fill="#fff"/><circle cx="140" cy="58" r="5" fill="#fff"/>
+      <path d="M158 60 q22 6 26 22 q-16 4 -28 -8z" fill="#E23B3B" stroke="${INK}" stroke-width="5"/>`;
+  }
+  if(cost==='dino'){
+    behind+=`<path d="M168 150 q40 6 30 40 q-24 -6 -34 -22z" fill="#3FBF6F" stroke="${INK}" stroke-width="6"/>`;
+    extra+=`<path d="M64 44 l10 -22 l12 20 l12 -24 l12 24 l12 -20 l10 22z" fill="#3FBF6F" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>
+      <ellipse cx="100" cy="140" rx="46" ry="30" fill="#BFF3CE" opacity=".85"/>`;
+  }
+  if(cost==='hero'){
+    behind+=`<path d="M52 84 q-34 40 -18 96 q28 -18 40 -44z" fill="#E23B3B" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M148 84 q34 40 18 96 q-28 -18 -40 -44z" fill="#E23B3B" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>`;
+    extra+=`<path d="M100 118 l9 18 20 3 -15 14 4 20 -18 -10 -18 10 4 -20 -15 -14 20 -3z" fill="#FFD93D" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>`;
+  }
+  if(cost==='unicorn'){
+    extra+=`<path d="M100 44 l-11 -34 l26 24z" fill="#FFD93D" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+      <circle cx="56" cy="52" r="13" fill="#FF7BAC" stroke="${INK}" stroke-width="5"/>
+      <circle cx="144" cy="52" r="13" fill="#8FE3FF" stroke="${INK}" stroke-width="5"/>
+      <circle cx="100" cy="40" r="12" fill="#A66BFF" stroke="${INK}" stroke-width="5"/>`;
+  }
+  if(cost==='chef'){
+    extra+=`<path d="M62 52 q-14 -34 14 -40 q8 -18 26 -12 q20 -10 28 12 q26 8 12 40z" fill="#fff" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>
+      <rect x="66" y="46" width="68" height="14" rx="7" fill="#fff" stroke="${INK}" stroke-width="6"/>
+      <path d="M66 150 h68 l-6 26 h-56z" fill="#fff" stroke="${INK}" stroke-width="6"/>`;
+  }
+  if(cost==='bee'){
+    behind+=`<ellipse cx="34" cy="92" rx="30" ry="18" fill="#DFF6FF" stroke="${INK}" stroke-width="5" transform="rotate(-18 34 92)" opacity=".9"/>
+      <ellipse cx="166" cy="92" rx="30" ry="18" fill="#DFF6FF" stroke="${INK}" stroke-width="5" transform="rotate(18 166 92)" opacity=".9"/>`;
+    extra+=`<path d="M40 118 q60 22 120 0" stroke="${INK}" stroke-width="12" fill="none" opacity=".55"/>
+      <path d="M46 142 q54 20 108 0" stroke="${INK}" stroke-width="12" fill="none" opacity=".55"/>
+      <path d="M84 40 q-10 -22 -22 -26" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <path d="M116 40 q10 -22 22 -26" stroke="${INK}" stroke-width="6" fill="none" stroke-linecap="round"/>
+      <circle cx="60" cy="12" r="8" fill="#FFD93D" stroke="${INK}" stroke-width="5"/>
+      <circle cx="140" cy="12" r="8" fill="#FFD93D" stroke="${INK}" stroke-width="5"/>`;
+  }
+  const cap = cost==='chef'||cost==='pirate'||cost==='unicorn' ? '' :
+   `<path d="M66 50 Q100 14 134 50 Z" fill="#FFD93D" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M78 44 Q100 26 122 44" stroke="#FF6B6B" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <rect x="96" y="18" width="8" height="16" rx="4" fill="${INK}"/>
+    <g class="prop"><ellipse cx="100" cy="16" rx="30" ry="7" fill="#3FC5F0" stroke="${INK}" stroke-width="5"/></g>`;
+
+  return `<svg viewBox="0 0 200 210" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+   <defs>
+    <radialGradient id="g${id}" cx="34%" cy="28%" r="78%">
+      <stop offset="0%" stop-color="#FFD08A"/><stop offset="46%" stop-color="${body}"/><stop offset="100%" stop-color="${bodyD}"/>
+    </radialGradient>
+   </defs>
+   ${o.shadow!==false?`<ellipse cx="100" cy="200" rx="52" ry="9" fill="${INK}" opacity=".16"/>`:''}
+   ${behind}
+   <ellipse cx="42" cy="150" rx="17" ry="13" fill="${bodyD}" stroke="${INK}" stroke-width="6" transform="rotate(-16 42 150)"/>
+   <ellipse cx="158" cy="150" rx="17" ry="13" fill="${bodyD}" stroke="${INK}" stroke-width="6" transform="rotate(16 158 150)"/>
+   <ellipse cx="76" cy="184" rx="20" ry="13" fill="${bodyD}" stroke="${INK}" stroke-width="6"/>
+   <ellipse cx="124" cy="184" rx="20" ry="13" fill="${bodyD}" stroke="${INK}" stroke-width="6"/>
+   <ellipse cx="100" cy="112" rx="70" ry="66" fill="url(#g${id})" stroke="${INK}" stroke-width="7"/>
+   <ellipse cx="100" cy="146" rx="42" ry="26" fill="${belly}" opacity=".55"/>
+   <ellipse cx="72" cy="82" rx="22" ry="15" fill="#fff" opacity=".38" transform="rotate(-22 72 82)"/>
+   <g class="blink" style="transform-origin:76px 96px">
+     <ellipse cx="76" cy="96" rx="23" ry="25" fill="#fff" stroke="${INK}" stroke-width="6"/>
+     <circle cx="${76+ex}" cy="${98+ey}" r="11.5" fill="#2A1D5C"/>
+     <circle cx="${72+ex}" cy="${93+ey}" r="4.2" fill="#fff"/>
+   </g>
+   <g class="blink" style="transform-origin:124px 96px">
+     <ellipse cx="124" cy="96" rx="23" ry="25" fill="#fff" stroke="${INK}" stroke-width="6"/>
+     <circle cx="${124+ex}" cy="${98+ey}" r="11.5" fill="#2A1D5C"/>
+     <circle cx="${120+ex}" cy="${93+ey}" r="4.2" fill="#fff"/>
+   </g>
+   <circle cx="52" cy="128" r="10" fill="#FF7BAC" opacity=".6"/>
+   <circle cx="148" cy="128" r="10" fill="#FF7BAC" opacity=".6"/>
+   ${mouth? `<path d="M78 132 Q100 160 122 132 Q100 142 78 132Z" fill="#C2355C" stroke="${INK}" stroke-width="6" stroke-linejoin="round"/>
+             <path d="M92 146 Q100 156 108 146 Q100 150 92 146Z" fill="#FF8FAE"/>`
+          : `<ellipse cx="100" cy="142" rx="12" ry="15" fill="#C2355C" stroke="${INK}" stroke-width="6"/>`}
+   ${cap}${extra}
+  </svg>`;
+}
+
+/* персонаж на сцене */
+ $('#dchar').innerHTML=puntik({ex:0,ey:2});
+
+/* ============ 2. ЗВУК (WebAudio) ============ */
+const S={ctx:null,on:store.get('puntik_mute','0')!=='1',
+ init(){ if(this.ctx){ if(this.ctx.state==='suspended') this.ctx.resume(); return; }
+  try{ this.ctx=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} },
+ ok(){ return this.on&&this.ctx; },
+ tone(f,d,type,v,f2){ if(!this.ok())return; const c=this.ctx,t=c.currentTime;
+  const o=c.createOscillator(),g=c.createGain(); o.type=type||'sine';
+  o.frequency.setValueAtTime(f,t); if(f2)o.frequency.exponentialRampToValueAtTime(Math.max(40,f2),t+d);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v||.2,t+.012);
+  g.gain.exponentialRampToValueAtTime(.001,t+d); o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+d+.05); },
+ boing(p){ if(!this.ok())return; this.tone(180+p*260,.28,'sine',.22,90+p*120); this.tone(520,.1,'triangle',.07,240); },
+ ding(n){ this.tone(880*Math.pow(1.12,n||0),.09,'square',.1); setTimeout(()=>this.tone(1320*Math.pow(1.12,n||0),.12,'square',.09),55); },
+ super(){ this.tone(300,.5,'sawtooth',.12,1400); },
+ ui(){ this.tone(660,.05,'square',.07); },
+ cheer(){ if(!this.ok())return; const c=this.ctx,t=c.currentTime,len=Math.floor(c.sampleRate*.7);
+  const b=c.createBuffer(1,len,c.sampleRate),ch=b.getChannelData(0);
+  for(let i=0;i<len;i++)ch[i]=(Math.random()*2-1)*(1-i/len)*.5;
+  const s=c.createBufferSource(); s.buffer=b; const f=c.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1200;
+  const g=c.createGain(); g.gain.setValueAtTime(.16,t); g.gain.exponentialRampToValueAtTime(.001,t+.7);
+  s.connect(f); f.connect(g); g.connect(c.destination); s.start(t); }
+};
+
+/* ============ 3. ИГРА ============ */
+const D=(function(){
+const cv=$('#cv'),box=$('#game'),ch=$('#dchar'),tap=$('#dTap');
+let ctx,W,H,dpr,raf=null,visible=('IntersectionObserver' in window)?false:true,inited=false,last=0;
+
+const REST=0,CHARGE=1,FLY=2;
+const st={state:REST,x:0,y:0,vx:0,vy:0,sq:0,rot:0,charge:0,super:false,bounces:0};
+const pad={x0(){return W/2;}};
+let items=[],parts=[],floats=[],clouds=[];
+let score=0,best=+store.get('puntik_best','0')||0,combo=0;
+const ptr={x:0,y:0,down:false};
+
+function rnd(a,b){return a+Math.random()*(b-a);}
+function clamp(v,a,b){return v<a?a:(v>b?b:v);}
+function lerp(a,b,t){return a+(b-a)*t;}
+
+function resize(){
+ const r=box.getBoundingClientRect(); dpr=Math.min(2,window.devicePixelRatio||1);
+ cv.width=Math.max(1,Math.round(r.width*dpr)); cv.height=Math.max(1,Math.round(r.height*dpr));
+ ctx.setTransform(dpr,0,0,dpr,0,0); W=r.width; H=r.height;
+ pad.y=H-40; pad.w=W*.62; pad.h=13;
+ st.x=clamp(st.x,20,W-20);
+ if(st.state===REST){ st.x=pad.x0(); st.y=pad.y-30; }
+ else st.y=clamp(st.y,-40,H+90);
+ const cs=Math.min(96,W*.3);
+  ch.style.width=cs+'px'; ch.style.height=cs+'px';
+  ch.style.margin=(-cs/2)+'px 0 0 '+(-cs/2)+'px';
+ chR=cs*.34;                                    /* [P5] радиус сбора = размер Пунтика */
+ if(!clouds.length) for(let i=0;i<5;i++) clouds.push({x:Math.random()*W,y:H*(.1+Math.random()*.55),s:.5+Math.random()*.8,v:(Math.random()<.5?-1:1)*(6+Math.random()*10)});
+}
+function spawnItem(){
+ const types=[['🍩',1,.55],['⭐',2,.25],['🎈',1,.13],['🍭',3,.07]];
+ let r=Math.random(),acc=0,pickT=types[0];
+ for(const tp of types){ acc+=tp[2]; if(r<=acc){pickT=tp;break;} }
+ items.push({e:pickT[0],v:pickT[1],x:26+Math.random()*(W-52),y:-24,vy:26+Math.random()*34,
+  ph:Math.random()*6.28,amp:12+Math.random()*22,r:17,rot:rnd(-14,14)});
+}
+function burst(x,y,c,n){ for(let i=0;i<n;i++){ const a=Math.random()*6.28,s=rnd(50,210);
+ parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-40,life:.55+Math.random()*.4,c:c||'#FFD93D',r:rnd(2.5,6)}); } }
+function float(x,y,txt,c){ floats.push({x,y,txt,c:c||'#fff',life:1}); }
+
+function start(){
+ st.state=REST; st.x=pad.x0(); st.y=pad.y-30; st.vx=0; st.vy=0;
+ st.sq=0; st.rot=0; st.charge=0; st.super=false; st.bounces=0;
+ items=[]; parts=[]; floats=[]; score=0; combo=0;
+ $('#dCombo').style.display='none'; tap.classList.remove('hide');
+ updHud();
+}
+function updHud(){ $('#dScore').textContent=score; $('#dBest').textContent=best; }
+
+function loop(ts){
+ raf=requestAnimationFrame(loop);
+  if(!ctx||!visible||shopOpen||document.hidden){ last=ts; return; }
+ const dt=Math.min(.033,Math.max(.001,(ts-last)/1000)); last=ts;
+ step(dt); draw();
+}
+
+function step(dt){
+ clouds.forEach(c=>{ c.x+=c.v*dt; if(c.x<-90)c.x=W+90; if(c.x>W+90)c.x=-90; });
+
+ if(st.state===REST||st.state===CHARGE){
+   if(st.state===CHARGE){ st.charge=Math.min(1,st.charge+dt*1.15); st.sq=st.charge*.5; }
+   else st.sq*=.86;
+   st.x=lerp(st.x,pad.x0(),.18);
+   st.y=pad.y-30+st.sq*16;
+ } else {
+   st.vy+=H*2.35*dt;
+    let tgt=null;                                 /* [P5] цель руления: палец / мышь / стрелки */
+   if(ptr.down||(ptr.type==='mouse'&&ptr.hover)) tgt=ptr.x;
+   if(KEY.l!==KEY.r) tgt=KEY.l?st.x-W*.55:st.x+W*.55;
+   if(tgt!==null) st.vx=lerp(st.vx,clamp((tgt-st.x)*4.2,-W*1.5,W*1.5),.14);
+   else st.vx*=.985;
+   st.x+=st.vx*dt; st.y+=st.vy*dt;
+   if(st.x<20){st.x=20;st.vx=Math.abs(st.vx)*.6;}
+   if(st.x>W-20){st.x=W-20;st.vx=-Math.abs(st.vx)*.6;}
+   st.rot=clamp(st.vx*.055,-26,26);
+   st.sq=clamp(-st.vy/2600,-.18,.22);
+   if(st.super&&st.vy<0) burst(st.x,st.y+14,['#FF6B6B','#FFD93D','#4EE0A8','#3FC5F0','#A66BFF'][Math.floor(Math.random()*5)],2);
+   /* посадка на батут */
+   if(st.vy>0&&st.y>=pad.y-30&&Math.abs(st.x-pad.x0())<pad.w*.62) land();
+   /* промахнулся мимо батута — мягкий «ветерок» возвращает (P2-14) */
+   if(st.y>pad.y+12&&st.vy>0){
+     st.vy-=H*5*dt;
+     st.vx+=clamp((pad.x0()-st.x)*3.4,-W*1.6,W*1.6)*dt;
+   }
+   if(st.y>H+90){ st.y=H+90; if(st.vy>0)st.vy=0; }
+ }
+
+ /* предметы */
+ if(items.length<9&&Math.random()<dt*2.4) spawnItem();
+ items.forEach(it=>{ it.y+=it.vy*dt; it.ph+=dt*2; it.x+=Math.sin(it.ph)*it.amp*dt; });
+ items=items.filter(it=>{
+   if(it.y>H+30) return false;
+   if(st.state===FLY){                    /* P0-3: очки капают только в полёте */
+    const d=Math.hypot(it.x-st.x,it.y-st.y);
+    if(d<it.r+chR){ collect(it); return false; }
+   }
+   return true;
+ });
+
+ parts.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=520*dt;p.life-=dt;});
+ parts=parts.filter(p=>p.life>0);
+ floats.forEach(f=>{f.y-=46*dt;f.life-=dt*.9;});
+ floats=floats.filter(f=>f.life>0);
+
+ /* отрисовка персонажа (DOM-слой) */
+ const sx=1+st.sq*.42, sy=1-st.sq*.46;
+ ch.style.transform=`translate(${st.x}px,${st.y}px) rotate(${st.rot}deg) scale(${sx.toFixed(3)},${sy.toFixed(3)})`;
+}
+
+function collect(it){
+ combo++;
+  const ser=Math.min(5,Math.max(1,combo-1));    /* [P5] множитель серии ×1…×5 */
+ const pts=it.v*(st.super?3:1)*ser;
+ score+=pts; wallet+=pts; store.set('puntik_wallet',wallet);
+ burst(it.x,it.y,'#FFD93D',12);
+ float(it.x,it.y-10,'+'+pts,'#fff');
+ S.ding(Math.min(6,combo));
+ if(combo===3){ S.cheer(); float(st.x,st.y-58,'СЕРИЯ ×2!','#FFD93D'); }
+ if(combo===6){ S.cheer(); float(st.x,st.y-58,'СЕРИЯ ×5!!!','#FF7BAC'); }
+ $('#dCombo').style.display=ser>1?'block':'none';
+ $('#dComboN').textContent=ser;
+ updHud();
+}
+
+/* P0-1: честная посадка — 1–2 отскока с затуханием, потом гарантированный отдых */
+function land(){
+ st.super=false;
+ st.bounces++;
+ st.y=pad.y-30;
+ const bounceV=-st.vy*.45;
+ if(st.bounces>=3||bounceV>-H*.32){
+   st.state=REST; st.vy=0; st.vx=0; st.rot=0; st.charge=0; st.bounces=0;
+   st.sq=.55; st.x=lerp(st.x,pad.x0(),.5);
+   combo=0; $('#dCombo').style.display='none';
+   S.boing(.2); burst(st.x,pad.y,'#8FE3FF',10);
+ } else {
+   st.vy=bounceV; st.sq=.55;
+   S.boing(.25+st.bounces*.12); burst(st.x,pad.y,'#8FE3FF',8);
+ }
+}
+
+function launch(){
+ const c=st.charge;
+ st.state=FLY; st.super=c>=.99; st.bounces=0;
+ st.vy=-(H*.95+c*H*1.25);
+ st.vx=clamp((ptr.x-st.x)*2.6,-W*1.4,W*1.4);
+ st.sq=-.2; st.charge=0; if(st.super) VKS.track('super_jump');
+ combo=0; $('#dCombo').style.display='none';
+ S.boing(c);
+ if(st.super){ S.super(); float(st.x,st.y-56,'🚀 СУПЕР!','#FFD93D'); burst(st.x,st.y+18,'#FF6B6B',26); }
+ burst(st.x,pad.y,'#fff',8);
+}
+
+/* ---- ввод: палец / мышь / клавиатура (P0-2 + P5) ---- */
+function pos(e){ const r=box.getBoundingClientRect();
+ ptr.x=e.clientX-r.left; ptr.y=e.clientY-r.top; }
+function down(e){
+ if(shopOpen||(e.target.closest&&(e.target.closest('.dbtn')||e.target.closest('#shop')))) return; /* магазин и кнопки не перехватываем */
+ e.preventDefault(); S.init();
+ try{ box.setPointerCapture(e.pointerId); }catch(_){}
+ pos(e); ptr.down=true;
+ tap.classList.add('hide');
+ if(st.state===REST){ st.state=CHARGE; st.charge=0; } }
+function move(e){ pos(e); ptr.type=e.pointerType||ptr.type; if(ptr.down)e.preventDefault(); }
+function finish(){ if(!ptr.down)return; ptr.down=false;
+ if(st.state===CHARGE) launch(); }
+
+box.addEventListener('pointerdown',down);
+box.addEventListener('pointermove',move);
+box.addEventListener('pointerup',finish);
+box.addEventListener('pointercancel',finish);
+window.addEventListener('pointerup',finish);
+window.addEventListener('resize',resize);
+
+/* ==================== [P5-INPUT] клавиатура + ховер-руление ==================== */
+const KEY={l:false,r:false,sp:false};
+window.addEventListener('keydown',e=>{
+  if(e.code==='ArrowLeft'){ KEY.l=true; e.preventDefault(); }
+  else if(e.code==='ArrowRight'){ KEY.r=true; e.preventDefault(); }
+  else if(e.code==='Space'&&!e.repeat&&!shopOpen){
+    e.preventDefault(); S.init();
+    tap.classList.add('hide');
+    if(st.state===REST){ st.state=CHARGE; st.charge=0; KEY.sp=true; }
+  }
+});
+window.addEventListener('keyup',e=>{
+  if(e.code==='ArrowLeft') KEY.l=false;
+  else if(e.code==='ArrowRight') KEY.r=false;
+  else if(e.code==='Space'&&KEY.sp){ KEY.sp=false;
+    if(!shopOpen&&st.state===CHARGE){ ptr.x=st.x; launch(); } }  /* с клавы — ровно вверх */
+});
+box.addEventListener('pointerenter',e=>{ ptr.hover=true; ptr.type=e.pointerType||ptr.type; });
+box.addEventListener('pointerleave',()=>{ ptr.hover=false; });
+
+/* [P5-SPRITES] кеш эмодзи: пререндер в offscreen-canvas */
+let chR=30;
+const SPR={};
+function sprite(e){
+ let s=SPR[e];
+ if(!s){ const P=Math.max(2,Math.ceil(44*dpr));
+   s=document.createElement('canvas'); s.width=P; s.height=P;
+   const x=s.getContext('2d');
+   x.textAlign='center'; x.textBaseline='middle';
+   x.font=Math.round(P*.72)+'px serif';
+   x.fillText(e,P/2,P*.54);
+   SPR[e]=s; }
+ return s;
+}
+/* ==================== [/P5-INPUT] ==================== */
+
+ $('#dReset').onclick=()=>{ S.init(); S.ui(); start(); };
+ $('#dSnd').onclick=()=>{ S.init(); S.on=!S.on;
+ store.set('puntik_mute',S.on?'0':'1');
+ $('#dSnd').textContent=S.on?'🔊':'🔇';
+ if(S.on)S.ui(); };
+ $('#dSnd').textContent=S.on?'🔊':'🔇';
+
+if('IntersectionObserver' in window)
+ new IntersectionObserver(en=>{ visible=en[0].isIntersecting;
+  if(visible&&!raf){ last=performance.now(); raf=requestAnimationFrame(loop); } },
+  {threshold:.05}).observe(box);
+
+/* P0-4: init идемпотентен */
+/* ==================== [FIX-1 RENDER] ==================== */
+function draw(){
+ const g=ctx.createLinearGradient(0,0,0,H);
+ g.addColorStop(0,'#4FC3F7'); g.addColorStop(.55,'#9BE7FF'); g.addColorStop(1,'#DFF6FF');
+ ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+ ctx.save(); ctx.globalAlpha=.9;
+ const sg=ctx.createRadialGradient(W*.84,H*.11,4,W*.84,H*.11,54);
+ sg.addColorStop(0,'#FFF6B0'); sg.addColorStop(.5,'#FFD93D'); sg.addColorStop(1,'rgba(255,217,61,0)');
+ ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(W*.84,H*.11,54,0,6.3); ctx.fill(); ctx.restore();
+ clouds.forEach(c=>drawCloud(c.x,c.y,34*c.s));
+ ctx.fillStyle='#63DD8B'; ctx.beginPath();
+ ctx.moveTo(-10,H+10); ctx.lineTo(-10,H-16);
+ ctx.quadraticCurveTo(W/2,H-42,W+10,H-16); ctx.lineTo(W+10,H+10); ctx.closePath(); ctx.fill();
+ ctx.strokeStyle=INK; ctx.lineWidth=4; ctx.stroke();
+ drawPad();
+ ctx.textAlign='center'; ctx.textBaseline='middle';
+  items.forEach(it=>{ ctx.save(); ctx.translate(it.x,it.y);
+  ctx.rotate(it.rot*Math.PI/180+Math.sin(it.ph)*.12);
+  const sp=sprite(it.e); ctx.drawImage(sp,-21,-21,42,42); ctx.restore(); });
+ parts.forEach(p=>{ ctx.globalAlpha=Math.max(0,p.life*1.7); ctx.fillStyle=p.c;
+  ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,6.3); ctx.fill(); });
+ ctx.globalAlpha=1;
+ if(st.state===CHARGE){
+  const bw=W*.6,bx=(W-bw)/2,by=H-16;
+  ctx.fillStyle='rgba(59,42,122,.28)'; rr(bx-3,by-3,bw+6,16,8); ctx.fill();
+  const gr=ctx.createLinearGradient(bx,0,bx+bw,0);
+  gr.addColorStop(0,'#4EE0A8'); gr.addColorStop(.55,'#FFD93D'); gr.addColorStop(1,'#FF6B6B');
+  ctx.fillStyle=gr; rr(bx,by,bw*st.charge,10,5); ctx.fill();
+  ctx.strokeStyle=INK; ctx.lineWidth=3; rr(bx,by,bw,10,5); ctx.stroke();
+  if(st.charge>=1){ ctx.fillStyle='#fff'; ctx.font='900 15px Nunito,sans-serif';
+   ctx.fillText('СУПЕР-ПРЫЖОК! 🚀',W/2,by-16); }
+ }
+ floats.forEach(f=>{ ctx.globalAlpha=Math.max(0,f.life); ctx.font='900 20px Comfortaa,Nunito,sans-serif';
+  ctx.lineWidth=5; ctx.strokeStyle=INK; ctx.strokeText(f.txt,f.x,f.y);
+  ctx.fillStyle=f.c; ctx.fillText(f.txt,f.x,f.y); });
+ ctx.globalAlpha=1;
+}
+function rr(x,y,w,h,r){ ctx.beginPath();
+ if(w<=0){ctx.rect(x,y,0.1,h);return;}
+ ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+ ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function drawCloud(x,y,r){ ctx.fillStyle='rgba(255,255,255,.95)';
+ ctx.beginPath(); ctx.arc(x,y,r*.62,0,6.3); ctx.arc(x+r*.7,y+r*.12,r*.48,0,6.3);
+ ctx.arc(x-r*.7,y+r*.14,r*.44,0,6.3); ctx.arc(x+r*.2,y-r*.35,r*.44,0,6.3); ctx.fill(); }
+function drawPad(){
+ const cx=pad.x0(),cy=pad.y,w=pad.w,h=pad.h+Math.max(0,st.sq)*10;
+ ctx.save();
+ ctx.strokeStyle=INK; ctx.lineWidth=7; ctx.lineCap='round';
+ ctx.beginPath(); ctx.moveTo(cx-w*.42,cy+6); ctx.lineTo(cx-w*.5,H-6); ctx.stroke();
+ ctx.beginPath(); ctx.moveTo(cx+w*.42,cy+6); ctx.lineTo(cx+w*.5,H-6); ctx.stroke();
+ ctx.beginPath(); ctx.moveTo(cx-w*.14,cy+8); ctx.lineTo(cx-w*.18,H-6); ctx.stroke();
+ ctx.beginPath(); ctx.moveTo(cx+w*.14,cy+8); ctx.lineTo(cx+w*.18,H-6); ctx.stroke();
+ ctx.fillStyle='#2A1D5C'; ctx.beginPath(); ctx.ellipse(cx,cy+8,w*.56,h*.62,0,0,6.3); ctx.fill();
+ const cols=['#FF6B6B','#FFD93D','#4EE0A8','#3FC5F0','#A66BFF'];
+ ctx.lineWidth=7;
+ for(let i=0;i<5;i++){ ctx.strokeStyle=cols[i]; ctx.beginPath();
+  ctx.ellipse(cx,cy,w*.56*(0.28+i*.18),h*.62*(0.3+i*.17),0,Math.PI*1.05,Math.PI*1.95); ctx.stroke(); }
+ ctx.strokeStyle=INK; ctx.lineWidth=6; ctx.beginPath(); ctx.ellipse(cx,cy,w*.56,h*.62,0,0,6.3); ctx.stroke();
+ ctx.restore();
+}
+/* ==================== [/FIX-1 RENDER] ==================== */
+return {
+  init(){ if(inited)return; inited=true;
+    ctx=cv.getContext('2d'); resize(); start(); updHud();
+    last=performance.now(); raf=requestAnimationFrame(loop); },
+  setBest(v){ v=+v||0; if(v>best){ best=v; store.set('puntik_best',best); updHud(); } }
+};
+})();
+
+function rr(x,y,w,h,r){ ctx.beginPath();
+ if(w<=0){ctx.rect(x,y,0.1,h);return;}
+ ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+ ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function drawCloud(x,y,r){ ctx.fillStyle='rgba(255,255,255,.95)';
+ ctx.beginPath(); ctx.arc(x,y,r*.62,0,6.3); ctx.arc(x+r*.7,y+r*.12,r*.48,0,6.3);
+ ctx.arc(x-r*.7,y+r*.14,r*.44,0,6.3); ctx.arc(x+r*.2,y-r*.35,r*.44,0,6.3); ctx.fill(); }
+function drawPad(){
+ const cx=pad.x0(),cy=pad.y,w=pad.w,h=pad.h+Math.max(0,st.sq)*10;
+ ctx.save();
+ ctx.strokeStyle=INK; ctx.lineWidth=7; ctx.lineCap='round';
+ ctx.beginPath(); ctx.moveTo(cx-w*.42,cy+6); ctx.lineTo(cx-w*.5,H-6); ctx.stroke();
+ ctx.beginPath(); ctx.moveTo(cx+w*.42,cy+6); ctx.lineTo(cx+w*.5,H-6); ctx.stroke();
+ ctx.beginPath(); ctx.moveTo(cx-w*.14,cy+8); ctx.lineTo(cx-w*.18,H-6); ctx.stroke();
+ ctx.beginPath(); ctx.moveTo(cx+w*.14,cy+8); ctx.lineTo(cx+w*.18,H-6); ctx.stroke();
+ ctx.fillStyle='#2A1D5C'; ctx.beginPath(); ctx.ellipse(cx,cy+8,w*.56,h*.62,0,0,6.3); ctx.fill();
+ const cols=['#FF6B6B','#FFD93D','#4EE0A8','#3FC5F0','#A66BFF'];
+ ctx.lineWidth=7;
+ for(let i=0;i<5;i++){ ctx.strokeStyle=cols[i]; ctx.beginPath();
+  ctx.ellipse(cx,cy,w*.56*(0.28+i*.18),h*.62*(0.3+i*.17),0,Math.PI*1.05,Math.PI*1.95); ctx.stroke(); }
+ ctx.strokeStyle=INK; ctx.lineWidth=6; ctx.beginPath(); ctx.ellipse(cx,cy,w*.56,h*.62,0,0,6.3); ctx.stroke();
+ ctx.restore();
+}
+
+/* ==================== [P2-SHOP] ==================== */
+let wallet=+store.get('puntik_wallet','0')||0;
+let shopOpen=false;
+
+const COSTS=[
+ {id:'none',    n:'Пунтик',       price:0,    body:'#FF9A2E', dark:'#EF6C15'},
+ {id:'astro',   n:'Космонавт',    price:120,  body:'#FF9A2E', dark:'#EF6C15'},
+ {id:'dino',    n:'Динозаврик',   price:200,  body:'#5BD97F', dark:'#2FA957', belly:'#D6F7DE'},
+ {id:'unicorn', n:'Единорожка',   price:320,  body:'#FF9FD2', dark:'#E463AC', belly:'#FFE3F1'},
+ {id:'hero',    n:'Супер-Пунт',   price:450,  body:'#5BC3FF', dark:'#2A8FD6', belly:'#DFF2FF'},
+ {id:'pirate',  n:'Капитан Понк', price:600,  body:'#FFB03A', dark:'#E08A12'},
+ {id:'chef',    n:'Пончик-шеф',   price:800,  body:'#FFF3E0', dark:'#E8CFA8', belly:'#FFFDF6'},
+ {id:'bee',     n:'Жужа',         price:1000, body:'#FFD93D', dark:'#E8A800'}
+];
+/* TODO (патч VK Bridge): chef/bee перевести на rewarded-видео */
+
+(function(){
+const el=$('#shop'),grid=$('#shopGrid'),wn=$('#walletN');
+let owned=store.get('puntik_owned','none').split(',').filter(Boolean);
+let eq=store.get('puntik_costume','none');
+if(!owned.includes('none')) owned.unshift('none');
+
+function save(){ store.set('puntik_owned',owned.join(',')); store.set('puntik_costume',eq); }
+function updWallet(){ wn.textContent=wallet; }
+function charHTML(c,sh){ return puntik({costume:c.id,body:c.body,dark:c.dark,
+  belly:c.belly||'#FFD9A0',shadow:sh!==false,ex:0,ey:2}); }
+function applyCostume(id){
+  const c=COSTS.find(x=>x.id===id)||COSTS[0];
+  $('#dchar').innerHTML=charHTML(c);
+}
+function render(){
+  updWallet();
+  grid.innerHTML=COSTS.map(c=>{
+    const isOwn=owned.includes(c.id), isEq=eq===c.id;
+    return `<div class="scard ${isOwn?'own':''} ${isEq?'eq':''}" data-id="${c.id}">
+      ${isEq?'<div class="badge">✓</div>':''}
+      <div class="av"><div>${charHTML(c,false)}</div></div>
+      <h4>${c.n}</h4>
+      <span class="pr">${isEq?'НАДЕТ':(isOwn?'МОЙ ✓':'🍩 '+c.price)}</span>
+    </div>`;}).join('');
+  grid.querySelectorAll('.scard').forEach(cd=>cd.onclick=()=>tap(cd));
+}
+function tap(cd){
+  const id=cd.dataset.id, c=COSTS.find(x=>x.id===id);
+  S.init();
+  if(owned.includes(id)){                       /* уже наш — надеваем */
+    eq=id; save(); applyCostume(id); S.ui(); S.cheer(); confettiFrom(cd); close();
+  } else if(wallet>=c.price){                   /* покупаем */
+    wallet-=c.price; store.set('puntik_wallet',wallet); VKS.track('costume_bought');
+    owned.push(id); eq=id; save(); applyCostume(id);
+    S.cheer(); confettiFrom(cd); updWallet(); render();
+    setTimeout(close,700);
+  } else {                                      /* не хватает — тряска */
+    cd.classList.add('shake'); setTimeout(()=>cd.classList.remove('shake'),460);
+    S.boing(.05);
+    const w=el.querySelector('.wallet'); w.classList.add('pulse');
+    setTimeout(()=>w.classList.remove('pulse'),460);
+  }
+}
+function open(){ S.init(); shopOpen=true; render(); el.classList.add('open'); S.ui(); }
+function close(){ shopOpen=false; el.classList.remove('open'); }
+ $('#dShop').onclick=open;
+ $('#shopClose').onclick=close;
+
+function confettiFrom(cd){
+  const cols=['#FF6B6B','#FFD93D','#4EE0A8','#3FC5F0','#A66BFF','#FF7BAC'];
+  const r=cd.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+  for(let i=0;i<36;i++){ const d=document.createElement('div'); d.className='conf';
+    d.style.left=cx+'px'; d.style.top=cy+'px'; d.style.background=cols[i%cols.length];
+    d.style.borderRadius=i%3?'3px':'50%'; document.body.appendChild(d);
+    const a=Math.random()*6.28, s=120+Math.random()*300;
+    d.animate([{transform:'translate(0,0) rotate(0)',opacity:1},
+      {transform:`translate(${Math.cos(a)*s}px,${Math.sin(a)*s+240}px) rotate(${Math.random()*900}deg)`,opacity:0}],
+      {duration:1000+Math.random()*600,easing:'cubic-bezier(.2,.7,.4,1)'}).onfinish=()=>d.remove();
+  }
+}
+/* [P4-VK] слияние костюмов из облака */
+function mergeCloud(cloudOwned,cloudEq){
+  const set={}; owned.forEach(x=>set[x]=1); (cloudOwned||[]).forEach(x=>set[x]=1);
+  owned=Object.keys(set);
+  if(cloudEq&&owned.includes(cloudEq)) eq=cloudEq;
+  save(); render(); applyCostume(eq);
+}
+HOOKS.shopMerge=mergeCloud;
+applyCostume(eq);   /* надеть сохранённый костюм при запуске */
+})();
+/* ==================== [/P2-SHOP] ==================== */
+/* ==================== [P3-TUT] ==================== */
+/* Туториал без текста: перчатка «играет» сама — шлёт настоящие pointer-события */
+const TUT=(function(){
+const box=$('#game');
+const PE=window.PointerEvent||window.MouseEvent;
+const HAND=`<svg viewBox="0 0 120 150" width="72" height="90" xmlns="http://www.w3.org/2000/svg">
+ <g stroke="#3B2A7A" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+  <rect x="16" y="26" width="26" height="42" rx="13" fill="#fff" transform="rotate(-12 29 47)"/>
+  <rect x="46" y="56" width="28" height="76" rx="14" fill="#fff"/>
+  <rect x="36" y="0" width="48" height="28" rx="10" fill="#FFD93D"/>
+  <rect x="28" y="16" width="64" height="58" rx="26" fill="#fff"/>
+ </g></svg>`;
+const el=document.createElement('div'); el.id='tut';
+el.innerHTML=`<div class="tutRing"></div><div class="tutHand">${HAND}</div>`;
+box.appendChild(el);
+
+let timers=[], active=false;
+function t(ms,fn){ timers.push(setTimeout(()=>{ if(!active)return;
+  if(shopOpen){ cancel(); return; } fn(); },ms)); }
+function ev(type,x,y){ try{ box.dispatchEvent(new PE(type,
+  {clientX:x,clientY:y,bubbles:true,cancelable:true})); }catch(e){} }
+function up(){ try{ window.dispatchEvent(new PE('pointerup',{bubbles:true})); }catch(e){} }
+
+function run(replay){
+  if(active) return;
+  active=true;
+  if(replay) $('#dReset').click();              /* чистое поле */
+  $('#dTap').classList.add('hide');
+  el.style.left='50%'; el.classList.remove('press','steer'); el.classList.add('show');
+  const r=box.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height-150;
+
+  t(350, ()=>{ el.classList.add('press'); ev('pointerdown',cx,cy); });       /* зажми... */
+  t(1300,()=>{ el.classList.remove('press'); up(); el.classList.add('steer'); }); /* отпусти — супер! */
+  t(1650,()=>{ const rc=box.getBoundingClientRect(); el.style.left='27%';
+    ev('pointerdown',rc.left+rc.width*.27,rc.top+rc.height*.4); });          /* рули влево */
+  t(2150,()=>{ const rc=box.getBoundingClientRect(); el.style.left='73%';
+    ev('pointermove',rc.left+rc.width*.73,rc.top+rc.height*.4); });          /* рули вправо */
+  t(2650,()=>{ up(); el.classList.remove('show'); });                        /* отпусти */
+  t(4400,()=>{ finish(); });
+}
+function finish(){
+  clearT(); el.classList.remove('show','press','steer');
+  store.set('puntik_tut','1');
+  $('#dTap').classList.remove('hide');
+  const d=document.createElement('div'); d.className='tutDone'; d.textContent='🎉👏';
+  box.appendChild(d); setTimeout(()=>d.remove(),1700);
+  active=false;
+}
+function cancel(){   /* магазин и прочее — тихо сворачиваемся, флаг НЕ ставим */
+  clearT(); up(); el.classList.remove('show','press','steer');
+  $('#dTap').classList.remove('hide'); active=false; }
+function clearT(){ timers.forEach(clearTimeout); timers=[]; }
+
+const b=$('#dTut'); if(b) b.onclick=()=>{ S.init(); run(true); };
+if(!store.get('puntik_tut','')) setTimeout(()=>run(false),900);   /* первый запуск — сам */
+return {run};
+})();
+/* ==================== [/P3-TUT] ==================== */
+
+/* [FIX-2 BOOT] старт немедленно: DOM готов, CSS уже загружен.
+   Ждать window.load было гонкой — цикл успевал стартовать раньше init */
+D.init();
+
+window.addEventListener('load',()=>setTimeout(()=>D.init(),120));
+if(document.readyState==='complete') setTimeout(()=>D.init(),120);
+/* [P4-DEBUG] пульт для консоли: PUNTIK.VKS / PUNTIK.store / PUNTIK.D / PUNTIK.TUT */
+window.PUNTIK={VKS:VKS,store:store,D:D,TUT:TUT,wallet:()=>wallet};
+})();
+</script>
+</body>
+</html>
